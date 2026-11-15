@@ -1,5 +1,5 @@
 import hashlib, json, os, re, sys, urllib.request
-from html import unescape
+from html import escape, unescape
 
 TOPICO = "alerta-fa-veiculos-rafael-2026"
 PAGINAS = [
@@ -38,7 +38,24 @@ def notificar(titulo, corpo, link):
         "https://ntfy.sh/" + TOPICO, data=corpo.encode("utf-8"), method="POST",
         headers={"Title": titulo, "Priority": "urgent", "Tags": "rotating_light,car",
                  "Click": link})  # titulo em ASCII: headers HTTP nao suportam UTF-8
-    urllib.request.urlopen(req, timeout=30).read()
+    erros = []
+    try:
+        urllib.request.urlopen(req, timeout=30).read()
+    except Exception as e:
+        erros.append("ntfy " + type(e).__name__)
+    token, chat = os.environ.get("TELEGRAM_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
+    if token and chat:
+        texto = "<b>%s</b>\n%s\n%s" % (escape(titulo), escape(corpo), escape(link))
+        tg = urllib.request.Request(
+            "https://api.telegram.org/bot%s/sendMessage" % token, method="POST",
+            data=json.dumps({"chat_id": chat, "text": texto, "parse_mode": "HTML"}).encode(),
+            headers={"Content-Type": "application/json"})
+        try:
+            urllib.request.urlopen(tg, timeout=30).read()
+        except Exception as e:  # nao imprimir e: o URL leva o token
+            erros.append("telegram " + type(e).__name__)
+    if erros:
+        print("falha no envio:", ", ".join(erros))  # sem raise: evita repetir o alerta a cada 5 min
 
 
 def main():
