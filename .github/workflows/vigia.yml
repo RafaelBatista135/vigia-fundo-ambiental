@@ -1,0 +1,23 @@
+name: vigia
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: vigia
+jobs:
+  vigia:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python monitor.py
+      - name: Guardar estado
+        run: |
+          if [ -n "$(git status --porcelain estado.json)" ]; then
+            git config user.name "vigia"
+            git config user.email "vigia@users.noreply.github.com"
+            git add estado.json
+            git commit -m "estado"
+            git pull --rebase -q && git push
+          fi
