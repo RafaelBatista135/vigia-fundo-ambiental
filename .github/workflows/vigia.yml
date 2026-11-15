@@ -1,4 +1,5 @@
 name: vigia
+# Ativar cron
 on:
   schedule:
     - cron: '*/5 * * * *'
